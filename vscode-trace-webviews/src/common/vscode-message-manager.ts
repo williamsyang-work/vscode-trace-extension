@@ -44,6 +44,7 @@ export class VsCodeMessageManager extends Messages.MessageManager {
      * Trace Explorer React APP
      *************************************************************************/
     reOpenTrace(experiment: Experiment): void {
+        console.dir(`Re-Opening Trace: ${experiment.name}`);
         const wrapper: string = JSONBig.stringify(experiment);
         vscode.postMessage({command: 'reopenTrace', data: {wrapper}});
     }

@@ -5,7 +5,9 @@ import { TraceExplorerItemPropertiesProvider } from './trace-explorer/properties
 import { TraceExplorerAvailableViewsProvider } from './trace-explorer/available-views/trace-explorer-available-views-webview-provider';
 import { TraceExplorerOpenedTracesViewProvider } from './trace-explorer/opened-traces/trace-explorer-opened-traces-webview-provider';
 import { fileHandler, openOverviewHandler } from './trace-explorer/trace-tree';
+import { TraceViewerPanel } from './trace-viewer-panel/trace-viewer-webview-panel';
 import { updateTspClient } from './utils/tspClient';
+import { PersistedState } from 'traceviewer-react-components/lib/components/trace-context-component';
 
 export function activate(context: vscode.ExtensionContext): void {
 
@@ -45,4 +47,22 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.commands.registerCommand('outputs.openOverview', () => {
         overViewOpenHanlder();
     }));
+
+    vscode.window.registerWebviewPanelSerializer(TraceViewerPanel.viewType, {
+        async deserializeWebviewPanel(
+            webviewPanel: vscode.WebviewPanel,
+            state: { pState: PersistedState, experimentString: string }
+        ) {
+            console.dir('deserializeWebviewPanel')
+            if (state) {
+                const { pState, experimentString } = state;
+                console.dir(state);
+                console.dir(`experiment`);
+                console.dir(experimentString);
+                TraceViewerPanel.revive(webviewPanel, context.extensionUri, pState, experimentString);
+            } else {
+                webviewPanel.dispose();
+            }
+        },
+    });
 }

@@ -5,6 +5,7 @@ import { OutputDescriptor } from 'tsp-typescript-client/lib/models/output-descri
 import { handleStatusMessage, handleRemoveMessage, setStatusFromPanel } from '../common/trace-message';
 import { signalManager, Signals } from 'traceviewer-base/lib/signals/signal-manager';
 import JSONBigConfig from 'json-bigint';
+import { PersistedState } from 'traceviewer-react-components/lib/components/trace-context-component';
 
 const JSONBig = JSONBigConfig({
     useNativeBigInt: true,
@@ -23,7 +24,7 @@ export class TraceViewerPanel {
 		[key: string]: TraceViewerPanel | undefined;
 	};
 
-	private static readonly viewType = 'react';
+	public static readonly viewType = 'react';
 	private static currentPanel: TraceViewerPanel | undefined;
 
 	private readonly _panel: vscode.WebviewPanel;
@@ -32,7 +33,7 @@ export class TraceViewerPanel {
 	private _experiment: Experiment | undefined = undefined;
 	private _onExperimentSelected = (openedExperiment: Experiment | undefined): void => this.doHandleExperimentSelectedSignal(openedExperiment);
 
-	public static createOrShow(extensionUri: vscode.Uri, name: string): TraceViewerPanel {
+	public static createOrShow(extensionUri: vscode.Uri, name: string, persistedData?: { pState: PersistedState, panel: vscode.WebviewPanel }): TraceViewerPanel {
 
 	    const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
@@ -42,7 +43,7 @@ export class TraceViewerPanel {
 	    if (openedPanel) {
 	        openedPanel._panel.reveal(column);
 	    } else {
-	        openedPanel = new TraceViewerPanel(extensionUri, column || vscode.ViewColumn.One, name);
+	        openedPanel = new TraceViewerPanel(extensionUri, column || vscode.ViewColumn.One, name, persistedData);
 	        TraceViewerPanel.activePanels[name] = openedPanel;
 	        setStatusFromPanel(name);
 	    }
@@ -69,22 +70,45 @@ export class TraceViewerPanel {
 		TraceViewerPanel.currentPanel?.showOverview();
 	}
 
-	private constructor(extensionUri: vscode.Uri, column: vscode.ViewColumn, name: string) {
+	public static revive = (panel: vscode.WebviewPanel, extensionUri: vscode.Uri, pState: PersistedState, experimentString: string) => {
+		const experiment = JSONBig.parse(experimentString) as Experiment;
+		const name = panel.title;
+		const persistedData = { panel, pState };
+		const revivedPanel = TraceViewerPanel.createOrShow(extensionUri, name, persistedData);
+		revivedPanel.setExperiment(experiment);
+		signalManager().fireExperimentSelectedSignal(experiment);
+	}
+
+	private constructor(extensionUri: vscode.Uri, column: vscode.ViewColumn, name: string, persistedData?: { pState: PersistedState, panel: vscode.WebviewPanel }) {
 	    this._extensionUri = extensionUri;
 	    // Create and show a new webview panel
-	    this._panel = vscode.window.createWebviewPanel(TraceViewerPanel.viewType, name, column, {
-	        // Enable javascript in the webview
-	        enableScripts: true,
+		this._panel = persistedData?.panel || vscode.window.createWebviewPanel(TraceViewerPanel.viewType, name, column, {
+			// Enable javascript in the webview
+			enableScripts: true,
+	
+			// Do not destroy the content when hidden
+			retainContextWhenHidden: true,
+			enableCommandUris: true,
+	
+			// And restric the webview to only loading content from our extension's `media` directory.
+			localResourceRoots: [
+				vscode.Uri.joinPath(this._extensionUri, 'pack')
+			]
+		});
 
-	        // Do not destroy the content when hidden
-		    retainContextWhenHidden: true,
-	        enableCommandUris: true,
+	    // this._panel = vscode.window.createWebviewPanel(TraceViewerPanel.viewType, name, column, {
+	    //     // Enable javascript in the webview
+	    //     enableScripts: true,
 
-	        // And restric the webview to only loading content from our extension's `media` directory.
-	        localResourceRoots: [
-	            vscode.Uri.joinPath(this._extensionUri, 'pack')
-	        ]
-	    });
+	    //     // Do not destroy the content when hidden
+		//     retainContextWhenHidden: true,
+	    //     enableCommandUris: true,
+
+	    //     // And restric the webview to only loading content from our extension's `media` directory.
+	    //     localResourceRoots: [
+	    //         vscode.Uri.joinPath(this._extensionUri, 'pack')
+	    //     ]
+	    // });
 
 	    // Set the webview's initial html content
 	    this._panel.webview.html = this._getHtmlForWebview();
@@ -128,11 +152,15 @@ export class TraceViewerPanel {
 	            return;
 	        case 'webviewReady':
 	            // Post the tspTypescriptClient
+				console.dir(`on webview ready in TraceViewerWebPanel`);
 	            this._panel.webview.postMessage({command: 'set-tspClient', data: getTspClientUrl()});
 	            if (this._experiment) {
+					console.dir(`sending experiment`);
 	                const wrapper: string = JSONBig.stringify(this._experiment);
 	                this._panel.webview.postMessage({command: 'set-experiment', data: wrapper});
-	            }
+	            } else {
+					console.dir(`no experiment...`);
+				}
 	            this.loadTheme();
 	            return;
 	        case 'updateProperties':
@@ -170,6 +198,7 @@ export class TraceViewerPanel {
 	}
 
 	setExperiment(experiment: Experiment): void {
+		console.dir(`setting experiment`);
 	    this._experiment = experiment;
 	    const wrapper: string = JSONBig.stringify(experiment);
 	    this._panel.webview.postMessage({command: 'set-experiment', data: wrapper});
@@ -239,10 +268,44 @@ export class TraceViewerPanel {
 
 				<script nonce="${nonce}">
 					const vscode = acquireVsCodeApi();
+
+					// Get persisted state
+					const retrievedState = vscode.getState();
+
+					// Function to store persisted state from TraceViewerContainer
+					let experiment = undefined;
+					const storePersistedState = (pState, experimentString) => {
+						vscode.setState({
+							persistedState: pState,
+							experimentString,
+						});
+					};
+
+					// Add persisted state and fxn to window obj for TraceViewerContainer to pick up
+					// picked up in index.tsx file for TraceViewerContainer
+					window.PersistedState = retrievedState?.persistedState || undefined;
+					window.storePersistedState = storePersistedState;
+
 				</script>
 				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;
+	}
+}
+
+export function getTraceViewerPanelOptions(extensionUri: vscode.Uri) {
+	return {
+		// Enable javascript in the webview
+		enableScripts: true,
+
+		// Do not destroy the content when hidden
+		retainContextWhenHidden: true,
+		enableCommandUris: true,
+
+		// And restric the webview to only loading content from our extension's `media` directory.
+		localResourceRoots: [
+			vscode.Uri.joinPath(extensionUri, 'pack')
+		]
 	}
 }
 

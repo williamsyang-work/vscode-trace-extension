@@ -8,7 +8,7 @@ import * as React from 'react';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { signalManager, Signals } from 'traceviewer-base/lib/signals/signal-manager';
-import { TraceContextComponent } from 'traceviewer-react-components/lib/components/trace-context-component';
+import { PersistedState, TraceContextComponent } from 'traceviewer-react-components/lib/components/trace-context-component';
 import 'traceviewer-react-components/style/trace-context-style.css';
 import { Experiment } from 'tsp-typescript-client/lib/models/experiment';
 import { OutputDescriptor } from 'tsp-typescript-client/lib/models/output-descriptor';
@@ -21,6 +21,11 @@ const JSONBig = JSONBigConfig({
     useNativeBigInt: true,
 });
 
+interface VscodeAppProps { 
+    persistedState?: PersistedState;
+    storePersistedState: (pState: PersistedState, experimentString: string) => void;
+}
+
 interface VscodeAppState {
   experiment: Experiment | undefined;
   tspClient: TspClient | undefined;
@@ -29,10 +34,11 @@ interface VscodeAppState {
   theme: string;
 }
 
-class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
+class TraceViewerContainer extends React.Component<VscodeAppProps, VscodeAppState>  {
   private DEFAULT_OVERVIEW_DATA_PROVIDER_ID = 'org.eclipse.tracecompass.internal.tmf.core.histogram.HistogramDataProvider';
 
   private _signalHandler: VsCodeMessageManager;
+  private _interval: ReturnType<typeof setInterval>;
 
   private _onProperties = (properties: { [key: string]: string }): void => this.doHandlePropertiesSignal(properties);
   /** Signal Handlers */
@@ -57,12 +63,14 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
       }
   };
 
-  constructor(props: {}) {
+  protected traceContextComponent = React.createRef<TraceContextComponent>();
+
+  constructor(props: VscodeAppProps) {
       super(props);
       this.state = {
           experiment: undefined,
           tspClient: undefined,
-          outputs: [],
+          outputs: this.props.persistedState?.outputs || [],
           overviewOutputDescriptor: undefined,
           theme: 'light'
       };
@@ -95,9 +103,11 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
       this.onOutputRemoved = this.onOutputRemoved.bind(this);
       this.onOverviewRemoved = this.onOverviewRemoved.bind(this);
       signalManager().on(Signals.OVERVIEW_OUTPUT_SELECTED, this._onOverviewSelected);
+      this._interval = setInterval(() => this.storePersistedState(), 2000);
   }
 
   componentDidMount(): void {
+      console.dir(`component did mount :)`);
       this._signalHandler.notifyReady();
       signalManager().on(Signals.ITEM_PROPERTIES_UPDATED, this._onProperties);
   }
@@ -105,6 +115,7 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
   componentWillUnmount(): void {
       signalManager().off(Signals.ITEM_PROPERTIES_UPDATED, this._onProperties);
       signalManager().off(Signals.OVERVIEW_OUTPUT_SELECTED, this._onOverviewSelected);
+      clearInterval(this._interval);
       window.removeEventListener('resize', this.onResize);
   }
 
@@ -159,10 +170,25 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
       }
   }
 
+  public storePersistedState = (): void => {
+    // WILLY - figure out when / where / how to fire this.
+    // Persisted state is not stored on close.  It is stored stored ongoing througout use. ??? fml.
+    if (this.traceContextComponent.current) {
+        try {
+            const experimentString = JSONBig.stringify(this.state.experiment);
+            this.props.storePersistedState(this.traceContextComponent.current.persistedState, experimentString);
+        } catch (err) {
+            console.dir(this.props.storePersistedState);
+            console.dir(err);
+        }
+    }
+  }
+
   public render(): React.ReactNode {
       return (
           <div className="trace-viewer-container">
               { this.state.experiment && this.state.tspClient && <TraceContextComponent
+                  ref={this.traceContextComponent}
                   experiment={this.state.experiment}
                   tspClient={this.state.tspClient}
                   outputs={this.state.outputs}
@@ -175,7 +201,8 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
                   // eslint-disable-next-line @typescript-eslint/no-empty-function
                   addResizeHandler={this.addResizeHandler}
                   removeResizeHandler={this.removeResizeHandler}
-                  backgroundTheme={this.state.theme}></TraceContextComponent>
+                  backgroundTheme={this.state.theme}
+                  persistedState={this.props.persistedState}></TraceContextComponent>
               }
           </div>
       );
