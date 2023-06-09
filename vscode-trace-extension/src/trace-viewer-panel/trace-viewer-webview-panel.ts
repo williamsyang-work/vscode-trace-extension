@@ -8,6 +8,7 @@ import { signalManager, Signals } from 'traceviewer-base/lib/signals/signal-mana
 import { VSCODE_MESSAGES } from 'vscode-trace-common/lib/messages/vscode-message-manager';
 import JSONBigConfig from 'json-bigint';
 import * as fs from 'fs';
+import { TimeRangeUpdatePayload } from 'traceviewer-base/lib/signals/time-range-data-signal-payloads';
 
 const JSONBig = JSONBigConfig({
     useNativeBigInt: true,
@@ -192,9 +193,18 @@ export class TraceViewerPanel {
 	                this._statusService.render(status);
 	            }
 	            return;
+			case VSCODE_MESSAGES.VIEW_RANGE_UPDATED:
+				signalManager().fireViewRangeUpdated(JSONBig.parse(message.data));
+				break;
+			case VSCODE_MESSAGES.SELECTION_RANGE_UPDATED:
+				signalManager().fireSelectionRangeUpdated(JSONBig.parse(message.data));
+				break;
 	        }
 	    }, undefined, this._disposables);
 	    signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
+		signalManager().on(Signals.REQUEST_SELECTION_RANGE_CHANGE, (payload: TimeRangeUpdatePayload) => {
+			this._panel.webview.postMessage({ command: VSCODE_MESSAGES.REQUEST_SELECTION_RANGE_CHANGE, data: JSONBig.stringify(payload)})
+		})
 	}
 
 	public doRefactor(): void {

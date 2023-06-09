@@ -16,6 +16,8 @@ import { TspClientProvider } from '../common/tsp-client-provider-impl';
 import { VsCodeMessageManager, VSCODE_MESSAGES } from 'vscode-trace-common/lib/messages/vscode-message-manager';
 import { convertSignalExperiment } from 'vscode-trace-common/lib/signals/vscode-signal-converter';
 import '../style/trace-viewer.css';
+import { TimeRangeUpdatePayload } from 'traceviewer-base/lib/signals/time-range-data-signal-payloads';
+import { TimeRange } from 'traceviewer-base/lib/utils/time-range';
 
 const JSONBig = JSONBigConfig({
     useNativeBigInt: true,
@@ -33,6 +35,13 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
   private DEFAULT_OVERVIEW_DATA_PROVIDER_ID = 'org.eclipse.tracecompass.internal.tmf.core.histogram.HistogramDataProvider';
 
   private _signalHandler: VsCodeMessageManager;
+
+  private onViewRangeUpdated = (payload: TimeRangeUpdatePayload): void => this._signalHandler.viewRangeUpdated(payload);
+  private onSelectionRangeUpdated = (payload: TimeRangeUpdatePayload): void => this._signalHandler.selectionRangeUpdated(payload);
+  private onRequestSelectionChange = (payload: TimeRangeUpdatePayload): void => this._signalHandler.requestSelectionRangeChange(payload);
+  private onExperimentUpdated = (payload: Experiment): void => this._signalHandler.experimentUpdated(payload);
+  // VVV Does this need to go somewhere else? VVV //
+  private onExperimentClosed = (payload: Experiment): void => this._signalHandler.experimentClosed(payload);
 
   private _onProperties = (properties: { [key: string]: string }): void => this.doHandlePropertiesSignal(properties);
   private _onSaveAsCSV = (payload: {traceId: string, data: string}): void => this.doHandleSaveAsCSVSignal(payload);
@@ -80,6 +89,12 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
           case VSCODE_MESSAGES.SET_EXPERIMENT:
               this.doHandleExperimentSetSignal(convertSignalExperiment(JSONBig.parse(message.data)));
               break;
+          case VSCODE_MESSAGES.EXPERIMENT_UPDATED:
+              this.onExperimentUpdated(convertSignalExperiment(JSONBig.parse(message.data)));
+              break;
+          case VSCODE_MESSAGES.EXPERIMENT_CLOSED:
+              this.onExperimentClosed(convertSignalExperiment(JSONBig.parse(message.data)));
+              break;
           case VSCODE_MESSAGES.SET_TSP_CLIENT:
               this.setState({tspClientProvider: new TspClientProvider(message.data, this._signalHandler)}, () => {
                   if (message.experiment) {
@@ -110,6 +125,19 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
               break;
           case VSCODE_MESSAGES.UPDATE_ZOOM:
               this.updateZoom(message.data);
+          case VSCODE_MESSAGES.VIEW_RANGE_UPDATED:
+              signalManager().fireViewRangeUpdated(JSONBig.parse(message.data));
+              break;
+          case VSCODE_MESSAGES.SELECTION_RANGE_UPDATED:
+              signalManager().fireSelectionRangeUpdated(JSONBig.parse(message.data));
+              break;
+          case VSCODE_MESSAGES.REQUEST_SELECTION_RANGE_CHANGE:
+              const { experimentUUID, timeRange } = JSONBig.parse(message.data);
+              const payload = {
+                experimentUUID,
+                timeRange: new TimeRange(BigInt(timeRange.start),BigInt(timeRange.end))
+              } as TimeRangeUpdatePayload;
+              signalManager().fireRequestSelectionRangeChange(payload);
               break;
           }
       });
@@ -123,12 +151,22 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
       this._signalHandler.notifyReady();
       signalManager().on(Signals.ITEM_PROPERTIES_UPDATED, this._onProperties);
       signalManager().on(Signals.SAVE_AS_CSV, this._onSaveAsCSV);
+      signalManager().on(Signals.VIEW_RANGE_UPDATED, this.onViewRangeUpdated);
+      signalManager().on(Signals.SELECTION_RANGE_UPDATED, this.onSelectionRangeUpdated);
+      signalManager().on(Signals.REQUEST_SELECTION_RANGE_CHANGE, this.onRequestSelectionChange);
+      signalManager().on(Signals.EXPERIMENT_UPDATED, this.onExperimentUpdated);
+      signalManager().on(Signals.EXPERIMENT_CLOSED, this.onExperimentClosed);
   }
 
   componentWillUnmount(): void {
       signalManager().off(Signals.ITEM_PROPERTIES_UPDATED, this._onProperties);
       signalManager().off(Signals.OVERVIEW_OUTPUT_SELECTED, this._onOverviewSelected);
       signalManager().off(Signals.SAVE_AS_CSV, this._onSaveAsCSV);
+      signalManager().off(Signals.VIEW_RANGE_UPDATED, this.onViewRangeUpdated);
+      signalManager().off(Signals.SELECTION_RANGE_UPDATED, this.onSelectionRangeUpdated);
+      signalManager().off(Signals.REQUEST_SELECTION_RANGE_CHANGE, this.onRequestSelectionChange);
+      signalManager().off(Signals.EXPERIMENT_UPDATED, this.onExperimentUpdated);
+      signalManager().off(Signals.EXPERIMENT_CLOSED, this.onExperimentClosed);
       window.removeEventListener('resize', this.onResize);
   }
 
@@ -181,6 +219,8 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState>  {
           signalManager().fireThemeChangedSignal(theme);
       });
   }
+
+
 
   protected async getDefaultTraceOverviewOutputDescriptor(experiment: Experiment| undefined): Promise<OutputDescriptor | undefined> {
       const availableDescriptors = await this.getAvailableTraceOverviewOutputDescriptor(experiment);

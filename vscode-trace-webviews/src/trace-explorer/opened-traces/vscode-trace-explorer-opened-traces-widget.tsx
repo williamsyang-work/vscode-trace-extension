@@ -84,13 +84,13 @@ class TraceExplorerOpenedTraces extends React.Component<{}, OpenedTracesAppState
           }
       });
       // this.onOutputRemoved = this.onOutputRemoved.bind(this);
+    }
+    
+    componentDidMount(): void {
+        this._signalHandler.notifyReady();
+        // ExperimentSelected handler is registered in the constructor (upstream code), but it's
+        // better to register it here when the react component gets mounted.
       signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-  }
-
-  componentDidMount(): void {
-      this._signalHandler.notifyReady();
-      // ExperimentSelected handler is registered in the constructor (upstream code), but it's
-      // better to register it here when the react component gets mounted.
       signalManager().on(Signals.CLOSE_TRACEVIEWERTAB, this._onRemoveTraceButton);
   }
 

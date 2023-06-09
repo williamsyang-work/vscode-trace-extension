@@ -115,6 +115,11 @@
           "type": "webview",
           "id": "traceExplorer.itemPropertiesView",
           "name": "Item Properties"
+        },
+        {
+          "type": "webview",
+          "id": "traceExplorer.timeRangeData",
+          "name": "Time Range Data"
         }
       ]
     },

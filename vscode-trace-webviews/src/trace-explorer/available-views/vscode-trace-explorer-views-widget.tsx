@@ -37,7 +37,7 @@ class TraceExplorerViewsWidget extends React.Component<{}, AvailableViewsAppStat
       };
       this._signalHandler = new VsCodeMessageManager();
       window.addEventListener('message', event => {
-
+        
           const message = event.data; // The JSON data our extension sent
           switch (message.command) {
           case VSCODE_MESSAGES.SET_TSP_CLIENT:

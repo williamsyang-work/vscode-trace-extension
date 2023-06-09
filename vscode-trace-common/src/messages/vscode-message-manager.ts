@@ -2,6 +2,7 @@ import * as Messages from 'traceviewer-base/lib/message-manager';
 import { OutputAddedSignalPayload } from 'traceviewer-base/lib/signals/output-added-signal-payload';
 import { Experiment } from 'tsp-typescript-client/lib/models/experiment';
 import JSONBigConfig from 'json-bigint';
+import { TimeRangeUpdatePayload } from 'traceviewer-base/lib/signals/time-range-data-signal-payloads';
 
 const JSONBig = JSONBigConfig({
     useNativeBigInt: true,
@@ -28,6 +29,8 @@ export const VSCODE_MESSAGES = {
     DELETE_TRACE: 'deleteTrace',
     EXPERIMENT_OPENED: 'experimentOpened',
     EXPERIMENT_SELECTED: 'experimentSelected',
+    EXPERIMENT_UPDATED: 'experimentUpdated',
+    EXPERIMENT_CLOSED: 'experimentClosed',
     NEW_STATUS: 'newStatus',
     OPENED_TRACES_UPDATED: 'openedTracesUpdated',
     OPEN_OVERVIEW: 'open-overview',
@@ -45,7 +48,10 @@ export const VSCODE_MESSAGES = {
     WEBVIEW_READY: 'webviewReady',
     UNDO: 'undo',
     REDO: 'redo',
-    UPDATE_ZOOM: 'updateZoom'
+    UPDATE_ZOOM: 'updateZoom',
+    VIEW_RANGE_UPDATED: 'viewRangeUpdated',
+    SELECTION_RANGE_UPDATED: 'selectionRangeUpdated',
+    REQUEST_SELECTION_RANGE_CHANGE: 'requestSelectionRangeChange'
 };
 
 export class VsCodeMessageManager extends Messages.MessageManager {
@@ -91,12 +97,20 @@ export class VsCodeMessageManager extends Messages.MessageManager {
         vscode.postMessage({command: VSCODE_MESSAGES.DELETE_TRACE, data: {wrapper}});
     }
 
-    experimentSelected(experiment: Experiment | undefined): void {
-        let wrapper = undefined;
-        if (experiment) {
-            wrapper = JSONBig.stringify(experiment);
-        }
-        vscode.postMessage({command: VSCODE_MESSAGES.EXPERIMENT_SELECTED, data: {wrapper}});
+    experimentSelected(experiment?: Experiment | undefined): void {
+        const wrapper = experiment ? JSONBig.stringify(experiment) : undefined;
+        const data = { wrapper };
+        vscode.postMessage({ command: VSCODE_MESSAGES.EXPERIMENT_SELECTED, data });
+    }
+
+    experimentUpdated(experiment: Experiment): void {
+        const data = JSONBig.stringify(experiment);
+        vscode.postMessage({ command: VSCODE_MESSAGES.EXPERIMENT_UPDATED, data });
+    }
+
+    experimentClosed(experiment: Experiment): void {
+        const data = JSONBig.stringify(experiment);
+        vscode.postMessage({ command: VSCODE_MESSAGES.EXPERIMENT_CLOSED, data });
     }
 
     outputAdded(payload: OutputAddedSignalPayload): void {
@@ -109,7 +123,24 @@ export class VsCodeMessageManager extends Messages.MessageManager {
         vscode.postMessage({command: VSCODE_MESSAGES.UPDATE_PROPERTIES, data: {properties}});
     }
 
+    viewRangeUpdated(payload: TimeRangeUpdatePayload): void {
+        const data = JSONBig.stringify(payload);
+        vscode.postMessage({ command: VSCODE_MESSAGES.VIEW_RANGE_UPDATED, data });
+    }
+
+    selectionRangeUpdated(payload: TimeRangeUpdatePayload): void {
+        const data = JSONBig.stringify(payload);
+        vscode.postMessage({ command: VSCODE_MESSAGES.SELECTION_RANGE_UPDATED, data });
+    }
+
+    requestSelectionRangeChange(payload: any): void {
+        const data = JSONBig.stringify(payload);
+        vscode.postMessage({ command: VSCODE_MESSAGES.REQUEST_SELECTION_RANGE_CHANGE, data });
+    }
+
     saveAsCSV(payload: {traceId: string, data: string}): void {
         vscode.postMessage({command: VSCODE_MESSAGES.SAVE_AS_CSV, payload});
     }
+
 }
+   
