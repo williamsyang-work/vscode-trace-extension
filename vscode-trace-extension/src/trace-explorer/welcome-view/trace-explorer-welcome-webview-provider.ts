@@ -13,8 +13,8 @@ const JSONBig = JSONBigConfig({
     useNativeBigInt: true
 });
 
-export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'traceExplorer.openedTracesView';
+export class TraceExplorerWelcomeViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'traceExplorer.welcomeView';
 
     private _view?: vscode.WebviewView;
     private _disposables: vscode.Disposable[] = [];
@@ -176,8 +176,7 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
 
     /* eslint-disable max-len */
     private _getHtmlForWebview(webview: vscode.Webview) {
-        // Get the local path to main script run in the webview, then convert it to a uri we can use in the webview.
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'pack', 'openedTracesPanel.js'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'pack', 'welcomePanel.js'));
         const codiconsUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this._extensionUri, 'lib', 'codicons', 'codicon.css')
         );

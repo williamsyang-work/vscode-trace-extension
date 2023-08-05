@@ -67,7 +67,8 @@ export const VSCODE_MESSAGES = {
     REQUEST_SELECTION_RANGE_CHANGE: 'requestSelectionRangeChange',
     RESTORE_VIEW: 'restoreView',
     RESTORE_COMPLETE: 'restoreComplete',
-    OUTPUT_DATA_CHANGED: 'outputDataChanged'
+    OUTPUT_DATA_CHANGED: 'outputDataChanged',
+    START_SERVER: 'startServer',
 };
 
 export class VsCodeMessageManager extends Messages.MessageManager {
@@ -192,5 +193,9 @@ export class VsCodeMessageManager extends Messages.MessageManager {
     setMarkerCategoriesContext(context: boolean): void {
         const status: string = JSON.stringify(context);
         vscode.postMessage({ command: VSCODE_MESSAGES.MARKER_CATEGORIES_CONTEXT, data: { status } });
+    }
+
+    startServer(): void {
+        vscode.postMessage({ command: VSCODE_MESSAGES.START_SERVER });
     }
 }

@@ -1,64 +1,49 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import * as React from 'react';
-import { ReactOpenTracesWidget } from 'traceviewer-react-components/lib/trace-explorer/trace-explorer-opened-traces-widget';
-import { VsCodeMessageManager, VSCODE_MESSAGES } from 'vscode-trace-common/lib/messages/vscode-message-manager';
-import { Menu, Item, useContextMenu, ItemParams } from 'react-contexify';
-import { TspClientProvider } from 'vscode-trace-common/lib/client/tsp-client-provider-impl';
-import { ITspClientProvider } from 'traceviewer-base/lib/tsp-client-provider';
-import { Experiment } from 'tsp-typescript-client/lib/models/experiment';
-import { signalManager, Signals } from 'traceviewer-base/lib/signals/signal-manager';
-import '../../style/trace-viewer.css';
 import 'traceviewer-react-components/style/trace-explorer.css';
 import '../../style/react-contextify.css';
-import { ExperimentManager } from 'traceviewer-base/lib/experiment-manager';
-import { convertSignalExperiment } from 'vscode-trace-common/lib/signals/vscode-signal-converter';
+import '../../style/trace-viewer.css';
 import JSONBigConfig from 'json-bigint';
-import { OpenedTracesUpdatedSignalPayload } from 'traceviewer-base/lib/signals/opened-traces-updated-signal-payload';
+import { convertSignalExperiment } from 'vscode-trace-common/lib/signals/vscode-signal-converter';
+import { VSCODE_MESSAGES, VsCodeMessageManager } from 'vscode-trace-common/lib/messages/vscode-message-manager';
+import ReactExplorerPlaceholderWidget from 'traceviewer-react-components/lib/trace-explorer/trace-explorer-placeholder-widget';
+import { ITspClientProvider } from 'traceviewer-base/lib/tsp-client-provider';
+import { Experiment } from 'tsp-typescript-client/lib/models/experiment';
+import { ItemParams } from 'react-contexify';
+import { TspClientProvider } from 'vscode-trace-common/lib/client/tsp-client-provider-impl';
 import { TraceServerUrlProvider } from 'vscode-trace-common/lib/server/trace-server-url-provider';
+import { ExperimentManager } from 'traceviewer-base/lib/experiment-manager';
+import { OpenedTracesUpdatedSignalPayload } from 'traceviewer-base/lib/signals/opened-traces-updated-signal-payload';
+import { signalManager, Signals } from 'traceviewer-base/lib/signals/signal-manager';
 
 const JSONBig = JSONBigConfig({
     useNativeBigInt: true
 });
 
-interface OpenedTracesAppState {
+interface WelcomeViewState {
     tspClientProvider: ITspClientProvider | undefined;
     experimentsOpened: boolean;
+    serverOnline: boolean;
 }
 
-const MENU_ID = 'traceExplorer.openedTraces.menuId';
-
-class TraceExplorerOpenedTraces extends React.Component<{}, OpenedTracesAppState> {
+class WelcomeView extends React.Component<{}, WelcomeViewState> {
     private _signalHandler: VsCodeMessageManager;
     private _experimentManager: ExperimentManager;
     private _urlProvider: TraceServerUrlProvider;
-
-    static ID = 'trace-explorer-opened-traces-widget';
-    static LABEL = 'Opened Traces';
-
-    private _onExperimentSelected = (openedExperiment: Experiment | undefined): void =>
-        this.doHandleExperimentSelectedSignal(openedExperiment);
-    private _onRemoveTraceButton = (traceUUID: string): void => this.doHandleRemoveTraceSignal(traceUUID);
     protected onUpdateSignal = (payload: OpenedTracesUpdatedSignalPayload): void =>
         this.doHandleOpenedTracesChanged(payload);
 
-    private doHandleRemoveTraceSignal(traceUUID: string) {
-        this._experimentManager
-            .getExperiment(traceUUID)
-            .then(experimentOpen => {
-                if (experimentOpen) {
-                    this._signalHandler.deleteTrace(experimentOpen);
-                }
-            })
-            .catch(error => {
-                console.error('Error: Unable to find experiment for the trace UUID, ', error);
-            });
-    }
+    static ID = 'trace-explorer-welcome-view';
+    static LABEL = 'WelcomeView';
+
+    private loading = false;
 
     constructor(props: {}) {
         super(props);
         this.state = {
             tspClientProvider: undefined,
-            experimentsOpened: true
+            experimentsOpened: true,
+            serverOnline: false,
         };
         this._signalHandler = new VsCodeMessageManager();
         window.addEventListener('message', event => {
@@ -104,21 +89,16 @@ class TraceExplorerOpenedTraces extends React.Component<{}, OpenedTracesAppState
                     break;
             }
         });
-        // this.onOutputRemoved = this.onOutputRemoved.bind(this);
     }
 
     componentDidMount(): void {
         this._signalHandler.notifyReady();
         // ExperimentSelected handler is registered in the constructor (upstream code), but it's
         // better to register it here when the react component gets mounted.
-        signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().on(Signals.CLOSE_TRACEVIEWERTAB, this._onRemoveTraceButton);
         signalManager().on(Signals.OPENED_TRACES_UPDATED, this.onUpdateSignal);
     }
 
     componentWillUnmount(): void {
-        signalManager().off(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().off(Signals.CLOSE_TRACEVIEWERTAB, this._onRemoveTraceButton);
         signalManager().off(Signals.OPENED_TRACES_UPDATED, this.onUpdateSignal);
     }
 
@@ -131,63 +111,16 @@ class TraceExplorerOpenedTraces extends React.Component<{}, OpenedTracesAppState
         }
     }
 
-    protected doHandleContextMenuEvent(event: React.MouseEvent<HTMLDivElement>, experiment: Experiment): void {
-        const { show } = useContextMenu({
-            id: MENU_ID
-        });
-
-        show(event, {
-            props: {
-                experiment: experiment
-            }
-        });
-    }
-
-    protected doHandleClickEvent(event: React.MouseEvent<HTMLDivElement>, experiment: Experiment): void {
-        this.doHandleReOpenTrace(experiment);
-    }
-
-    protected doHandleExperimentSelectedSignal(experiment: Experiment | undefined): void {
-        this._signalHandler.experimentSelected(experiment);
-    }
-
-    public render(): React.ReactNode {
-
-        return <>
-            <div>
-                {this.state.tspClientProvider && (
-                    <ReactOpenTracesWidget
-                        id={TraceExplorerOpenedTraces.ID}
-                        title={TraceExplorerOpenedTraces.LABEL}
-                        tspClientProvider={this.state.tspClientProvider}
-                        contextMenuRenderer={(
-                            event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-                            experiment: Experiment
-                        ) => this.doHandleContextMenuEvent(event, experiment)}
-                        onClick={(event: React.MouseEvent<HTMLDivElement, MouseEvent>, experiment: Experiment) =>
-                            this.doHandleClickEvent(event, experiment)
-                        }
-                    ></ReactOpenTracesWidget>
-                )}
-            </div>
-            <Menu id={MENU_ID} theme={'dark'} animation={'fade'}>
-                <Item id="open-id" onClick={this.handleItemClick}>
-                    Open Trace
-                </Item>
-                <Item id="close-id" onClick={this.handleItemClick}>
-                    Close Trace
-                </Item>
-                <Item id="remove-id" onClick={this.handleItemClick}>
-                    Remove Trace
-                </Item>
-            </Menu>
-        </>
-    }
-
     protected handleOpenTrace = async (): Promise<void> => this.doHandleOpenTrace();
 
     private async doHandleOpenTrace() {
+        this.loading = true;
         this._signalHandler.openTrace();
+        this.loading = false;
+    }
+
+    protected startServer(): void {
+        this._signalHandler.startServer();
     }
 
     protected async doHandleReOpenTrace(experiment: Experiment): Promise<void> {
@@ -214,12 +147,25 @@ class TraceExplorerOpenedTraces extends React.Component<{}, OpenedTracesAppState
                 if (this._experimentManager) {
                     this._experimentManager.deleteExperiment((args.props.experiment as Experiment).UUID);
                 }
-
                 return;
             default:
             // Do nothing
         }
     };
+
+    public render(): React.ReactNode {
+        return (
+            <div>
+                 <ReactExplorerPlaceholderWidget
+                    serverOn={this.state.serverOnline}
+                    tracesOpen={this.state.experimentsOpened}
+                    loading={this.loading}
+                    handleOpenTrace={() => this.handleOpenTrace()}
+                    handleStartServer={() => this.startServer()}
+                />
+            </div>
+        );
+    }
 }
 
-export default TraceExplorerOpenedTraces;
+export default WelcomeView;
