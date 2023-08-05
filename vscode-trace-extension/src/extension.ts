@@ -66,17 +66,26 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
         })
     );
 
+    const updateUris = async (): Promise<void> => {
+        const baseUri = vscode.Uri.parse(getTraceServerUrl());
+        const extUri = await vscode.env.asExternalUri(baseUri);
+        const extUriString = extUri.toString();
+
+        tracesProvider.updateTraceServerUrl(extUriString);
+        myAnalysisProvider.updateTraceServerUrl(extUriString);
+        TraceViewerPanel.updateTraceServerUrl(extUriString);
+    };
+
     const analysisProvider = new AnalysisProvider();
     // TODO: For now, a different command opens traces from file explorer. Remove when we have a proper trace finder
     const fileOpenHandler = fileHandler(analysisProvider);
-    context.subscriptions.push(
-        vscode.commands.registerCommand('traces.openTraceFile', async file => {
-            await startTraceServerIfAvailable();
-            if (await isUp()) {
-                fileOpenHandler(context, file);
-            }
-        })
-    );
+    context.subscriptions.push(vscode.commands.registerCommand('traces.openTraceFile', async file => {
+        await startTraceServerIfAvailable();
+        await updateUris();
+        if (await isUp()) {
+            fileOpenHandler(context, file);
+        }
+    }));
 
     // Listening to configuration change for the trace server URL
     context.subscriptions.push(
@@ -88,18 +97,10 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
                 updateTspClient();
             }
 
-            if (e.affectsConfiguration('trace-compass.traceserver.url')) {
-                const newUrl = getTraceServerUrl();
-
-                // Signal the change to the `Opened traces` and `Available views` webview
-                tracesProvider.updateTraceServerUrl(newUrl);
-                myAnalysisProvider.updateTraceServerUrl(newUrl);
-
-                // Signal the change to all trace panels
-                TraceViewerPanel.updateTraceServerUrl(newUrl);
-            }
-        })
-    );
+        if (e.affectsConfiguration('trace-compass.traceserver.url')) {
+            updateUris();
+        }
+    }));
 
     const overViewOpenHandler = openOverviewHandler();
 
@@ -152,14 +153,13 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
         })
     );
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openedTraces.openTraceFolder', async () => {
-            await startTraceServerIfAvailable();
-            if (await isUp()) {
-                fileOpenHandler(context, undefined);
-            }
-        })
-    );
+    context.subscriptions.push(vscode.commands.registerCommand('openedTraces.openTraceFolder', async () => {
+        await startTraceServerIfAvailable();
+        await updateUris();
+        if (await isUp()) {
+            fileOpenHandler(context, undefined);
+        }
+    }));
 
     context.subscriptions.push(
         vscode.commands.registerCommand('traceViewer.shortcuts', () => {
@@ -167,14 +167,13 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
         })
     );
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand('serverStatus.started', () => {
-            serverStatusService.render(true);
-            if (tracesProvider) {
-                tracesProvider.postMessagetoWebview(VSCODE_MESSAGES.TRACE_SERVER_STARTED, undefined);
-            }
-        })
-    );
+    context.subscriptions.push(vscode.commands.registerCommand('serverStatus.started', () => {
+        serverStatusService.render(true);
+        updateUris();
+        if (tracesProvider) {
+            tracesProvider.postMessagetoWebview(VSCODE_MESSAGES.TRACE_SERVER_STARTED, undefined);
+        }
+    }));
 
     context.subscriptions.push(
         vscode.commands.registerCommand('serverStatus.stopped', () => {
