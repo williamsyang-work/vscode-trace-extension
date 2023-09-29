@@ -106,6 +106,13 @@ class TraceExplorerOpenedTraces extends React.Component<{}, OpenedTracesAppState
                         this._urlProvider.updateTraceServerUrl(message.data);
                     }
                     break;
+                    case VSCODE_MESSAGES.CANCEL_REQUESTS:
+                        if (this.state.tspClientProvider instanceof TspClientProvider) {
+                            const RequestManager = this.state.tspClientProvider.getRequestManager();
+                            if (RequestManager) {
+                                RequestManager.cancelAllRequests();
+                            }
+                        }
             }
         });
         // this.onOutputRemoved = this.onOutputRemoved.bind(this);

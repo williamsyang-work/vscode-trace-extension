@@ -126,6 +126,10 @@ export class TraceExplorerAvailableViewsProvider implements vscode.WebviewViewPr
         }
     }
 
+    public cancelHttpRequests(): void {
+        this._view?.webview.postMessage({ command: VSCODE_MESSAGES.CANCEL_REQUESTS });
+    }
+
     /* eslint-disable max-len */
     private _getHtmlForWebview(webview: vscode.Webview) {
         // Get the local path to main script run in the webview, then convert it to a uri we can use in the webview.

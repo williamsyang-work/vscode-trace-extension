@@ -144,6 +144,13 @@ export class TraceViewerPanel {
         );
     }
 
+    public static cancelHttpRequests(): void {
+        Object.values(TraceViewerPanel.activePanels).forEach(
+            trace =>
+                trace?._panel.webview.postMessage({ command: VSCODE_MESSAGES.CANCEL_REQUESTS })
+        );
+    }
+
     private constructor(
         extensionUri: vscode.Uri,
         column: vscode.ViewColumn,

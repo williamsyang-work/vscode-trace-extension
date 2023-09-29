@@ -180,6 +180,12 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState> {
                         this._urlProvider.updateTraceServerUrl(message.data);
                     }
                     break;
+                case VSCODE_MESSAGES.CANCEL_REQUESTS:
+                    const RequestManager = this.state.tspClientProvider?.getRequestManager();
+                    if (RequestManager) {
+                        RequestManager.cancelAllRequests();
+                    }
+                    break;
             }
         });
         window.addEventListener('resize', this.onResize);

@@ -167,8 +167,16 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
         })
     );
 
+    const cancelAllOngoingRequests = () => {
+        TraceViewerPanel.cancelHttpRequests();
+        myAnalysisProvider.cancelHttpRequests();
+        tracesProvider.cancelHttpRequests();
+        tspClientProvider.getRequestManager().cancelAllRequests();
+    }
+
     context.subscriptions.push(vscode.commands.registerCommand('serverStatus.started', () => {
         serverStatusService.render(true);
+        cancelAllOngoingRequests();
         updateUris();
         if (tracesProvider) {
             tracesProvider.postMessagetoWebview(VSCODE_MESSAGES.TRACE_SERVER_STARTED, undefined);
@@ -177,6 +185,7 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('serverStatus.stopped', () => {
+            cancelAllOngoingRequests();
             serverStatusService.render(false);
         })
     );

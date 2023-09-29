@@ -132,7 +132,7 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
                     case VSCODE_MESSAGES.OPEN_TRACE:
                         vscode.commands.executeCommand('openedTraces.openTraceFolder');
                         return;
-                    case VSCODE_MESSAGES.EXPERIMENT_SELECTED: {
+                    case VSCODE_MESSAGES.EXPERIMENT_SELECTED:
                         let experiment: Experiment | undefined;
                         if (message.data && message.data.wrapper) {
                             experiment = convertSignalExperiment(JSONBig.parse(message.data.wrapper));
@@ -140,7 +140,8 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
                             experiment = undefined;
                         }
                         signalManager().fireExperimentSelectedSignal(experiment);
-                    }
+                        return;
+                    
                 }
             },
             undefined,
@@ -168,6 +169,10 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
                 this._view.webview.postMessage({ command: _command });
             }
         }
+    }
+
+    public cancelHttpRequests(): void {
+        this._view?.webview.postMessage({ command: VSCODE_MESSAGES.CANCEL_REQUESTS });
     }
 
     /* eslint-disable max-len */
