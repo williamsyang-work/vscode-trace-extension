@@ -13,8 +13,8 @@ const JSONBig = JSONBigConfig({
     useNativeBigInt: true
 });
 
-export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'traceExplorer.openedTracesView';
+export class TraceExplorerWelcomeViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'traceExplorer.welcomeView';
 
     private _view?: vscode.WebviewView;
     private _disposables: vscode.Disposable[] = [];
@@ -133,7 +133,6 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
                         vscode.commands.executeCommand('openedTraces.openTraceFolder');
                         return;
                     case VSCODE_MESSAGES.EXPERIMENT_SELECTED:
-                        // Need to block scope the variable 'experiment'...
                         if (true) {
                             let experiment: Experiment | undefined;
                             if (message.data && message.data.wrapper) {
@@ -142,8 +141,10 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
                                 experiment = undefined;
                             }
                             signalManager().fireExperimentSelectedSignal(experiment);
+                            return;
                         }
-                        return;
+                    case VSCODE_MESSAGES.START_SERVER:
+                        vscode.commands.executeCommand('traceViewer.startServer');
                 }
             },
             undefined,
@@ -175,8 +176,7 @@ export class TraceExplorerOpenedTracesViewProvider implements vscode.WebviewView
 
     /* eslint-disable max-len */
     private _getHtmlForWebview(webview: vscode.Webview) {
-        // Get the local path to main script run in the webview, then convert it to a uri we can use in the webview.
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'pack', 'openedTracesPanel.js'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'pack', 'welcomePanel.js'));
         const codiconsUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this._extensionUri, 'lib', 'codicons', 'codicon.css')
         );

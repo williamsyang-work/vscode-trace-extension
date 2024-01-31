@@ -29,7 +29,6 @@ export class TspClientProvider implements ITspClientProvider {
             this._signalHandler?.notifyConnection(status);
         };
         RestClient.addConnectionStatusListener(this._statusListener);
-        this._tspClient.checkHealth();
 
         this._urlProvider = _urlProvider;
         this._listeners = [];
