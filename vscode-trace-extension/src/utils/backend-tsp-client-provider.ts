@@ -49,12 +49,10 @@ export async function isUp(): Promise<boolean> {
 function getUriRootFromUserSettings(): string {
     const tsConfig = vscode.workspace.getConfiguration('trace-compass.traceserver');
     const traceServerUrl: string = tsConfig.get<string>('url') || 'http://localhost:8080';
-    _root = traceServerUrl.endsWith('/') ? traceServerUrl : traceServerUrl + '/';
-    return _root;
+    return traceServerUrl.endsWith('/') ? traceServerUrl : traceServerUrl + '/';
 }
 
 function getApiPathFromUserSettings(): string {
     const tsConfig = vscode.workspace.getConfiguration('trace-compass.traceserver');
-    _path = tsConfig.get<string>('apiPath') || 'tsp/api';
-    return _path;
+    return tsConfig.get<string>('apiPath') || 'tsp/api';
 }
