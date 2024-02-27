@@ -4,41 +4,37 @@ import { ExperimentManager } from 'traceviewer-base/lib/experiment-manager';
 import { TraceManager } from 'traceviewer-base/lib/trace-manager';
 import { ITspClientProvider } from 'traceviewer-base/lib/tsp-client-provider';
 import { VsCodeMessageManager } from '../messages/vscode-message-manager';
-import { TraceServerUrlProvider } from '../server/trace-server-url-provider';
 
 export class TspClientProvider implements ITspClientProvider {
     private _tspClient: TspClient;
     private _traceManager: TraceManager;
     private _experimentManager: ExperimentManager;
-    private _signalHandler: VsCodeMessageManager | undefined;
     private _statusListener: ConnectionStatusListener;
-    private _urlProvider: TraceServerUrlProvider;
-    private _listeners: ((tspClient: TspClient) => void)[];
+    private _listeners: ((tspClient: TspClient) => void)[] = [];
 
     constructor(
-        traceServerUrl: string,
-        signalHandler: VsCodeMessageManager | undefined,
-        _urlProvider: TraceServerUrlProvider
+        private _traceServerUrl: string,
+        private _signalHandler: VsCodeMessageManager | undefined
     ) {
-        this._tspClient = new TspClient(traceServerUrl);
-        this._traceManager = new TraceManager(this._tspClient);
-        this._experimentManager = new ExperimentManager(this._tspClient, this._traceManager);
-
-        this._signalHandler = signalHandler;
+        this.createNewClients();
         this._statusListener = (status: boolean) => {
             this._signalHandler?.notifyConnection(status);
         };
         RestClient.addConnectionStatusListener(this._statusListener);
         this._tspClient.checkHealth();
 
-        this._urlProvider = _urlProvider;
-        this._listeners = [];
-        this._urlProvider.onTraceServerUrlChange((url: string) => {
-            this._tspClient = new TspClient(url);
-            this._traceManager = new TraceManager(this._tspClient);
-            this._experimentManager = new ExperimentManager(this._tspClient, this._traceManager);
-            this._listeners.forEach(listener => listener(this._tspClient));
-        });
+    }
+
+    private createNewClients(): void {
+        this._tspClient = new TspClient(this._traceServerUrl);
+        this._traceManager = new TraceManager(this._tspClient);
+        this._experimentManager = new ExperimentManager(this._tspClient, this._traceManager);
+    }
+
+    public updateTspClientUrl(url: string): void {
+        this._traceServerUrl = url;
+        this.createNewClients();
+        this._listeners.forEach(listener => listener(this._tspClient));
     }
 
     public getTspClient(): TspClient {
