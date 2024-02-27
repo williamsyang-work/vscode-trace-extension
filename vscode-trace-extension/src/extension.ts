@@ -12,11 +12,10 @@ import {
     resetZoomHandler,
     undoRedoHandler,
     zoomHandler,
-    keyboardShortcutsHandler,
-    reInitializeTraceManager
+    keyboardShortcutsHandler
 } from './trace-explorer/trace-tree';
 import { TraceServerConnectionStatusService } from './utils/trace-server-status';
-import { getTspClientUrl, updateTspClient } from './utils/tspClient';
+import { getTspClientUrl, updateTspClient } from './utils/backend-tsp-client-provider';
 import { TraceExtensionLogger } from './utils/trace-extension-logger';
 import { ExternalAPI, traceExtensionAPI } from './external-api/external-api';
 import { TraceExtensionWebviewManager } from './utils/trace-extension-webview-manager';
@@ -102,7 +101,6 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
                 propertiesProvider.updateTraceServerUrl(newTspClientURL);
                 timeRangeDataProvider.updateTraceServerUrl(newTspClientURL);
                 traceServerURLProvider.updateTraceServerUrl(newTspClientURL);
-                reInitializeTraceManager();
 
                 // Signal the change to all trace panels
                 TraceViewerPanel.updateTraceServerUrl(newTspClientURL);

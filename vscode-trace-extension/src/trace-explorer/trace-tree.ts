@@ -2,23 +2,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Trace as TspTrace } from 'tsp-typescript-client/lib/models/trace';
-import { TraceManager } from 'traceviewer-base/lib/trace-manager';
-import { ExperimentManager } from 'traceviewer-base/lib/experiment-manager';
 import { AnalysisProvider } from './analysis-tree';
 import { TraceViewerPanel } from '../trace-viewer-panel/trace-viewer-webview-panel';
-import { getTspClient } from '../utils/tspClient';
+import { getTraceManager, getExperimentManager } from '../utils/backend-tsp-client-provider';
 import { traceLogger } from '../extension';
 import { KeyboardShortcutsPanel } from '../trace-viewer-panel/keyboard-shortcuts-panel';
 
 const rootPath = path.resolve(__dirname, '../../..');
-
-let traceManager = new TraceManager(getTspClient());
-let experimentManager = new ExperimentManager(getTspClient(), traceManager);
-
-export const reInitializeTraceManager = (): void => {
-    traceManager = new TraceManager(getTspClient());
-    experimentManager = new ExperimentManager(getTspClient(), traceManager);
-};
 
 // eslint-disable-next-line no-shadow
 export enum ProgressMessages {
@@ -98,14 +88,14 @@ export const traceHandler =
         const panel = TraceViewerPanel.createOrShow(context.extensionUri, trace.name, undefined);
         (async () => {
             const traces = new Array<TspTrace>();
-            const t = await traceManager.openTrace(trace.uri, trace.name);
+            const t = await getTraceManager().openTrace(trace.uri, trace.name);
             if (t) {
                 traces.push(t);
             }
-            const experiment = await experimentManager.openExperiment(trace.name, traces);
+            const experiment = await getExperimentManager().openExperiment(trace.name, traces);
             if (experiment) {
                 panel.setExperiment(experiment);
-                const descriptors = await experimentManager.getAvailableOutputs(experiment.UUID);
+                const descriptors = await getExperimentManager().getAvailableOutputs(experiment.UUID);
                 if (descriptors && descriptors.length) {
                     analysisTree.refresh(descriptors);
                 }
@@ -207,7 +197,7 @@ export const fileHandler =
                 const traces = new Array<TspTrace>();
                 for (let i = 0; i < tracesArray.length; i++) {
                     const traceName = path.basename(tracesArray[i]);
-                    const trace = await traceManager.openTrace(tracesArray[i], traceName);
+                    const trace = await getTraceManager().openTrace(tracesArray[i], traceName);
                     if (trace) {
                         traces.push(trace);
                     } else {
@@ -233,10 +223,10 @@ export const fileHandler =
                     return;
                 }
 
-                const experiment = await experimentManager.openExperiment(name, traces);
+                const experiment = await getExperimentManager().openExperiment(name, traces);
                 if (experiment) {
                     panel.setExperiment(experiment);
-                    const descriptors = await experimentManager.getAvailableOutputs(experiment.UUID);
+                    const descriptors = await getExperimentManager().getAvailableOutputs(experiment.UUID);
                     if (descriptors && descriptors.length) {
                         analysisTree.refresh(descriptors);
                     }
@@ -244,7 +234,7 @@ export const fileHandler =
 
                 if (token.isCancellationRequested) {
                     if (experiment) {
-                        experimentManager.deleteExperiment(experiment.UUID);
+                        getExperimentManager().deleteExperiment(experiment.UUID);
                     }
                     rollbackTraces(traces, 20, progress);
                     progress.report({ message: ProgressMessages.COMPLETE, increment: 10 });
@@ -266,7 +256,7 @@ const rollbackTraces = async (
 ) => {
     progress.report({ message: ProgressMessages.ROLLING_BACK_TRACES, increment: progressIncrement });
     for (let i = 0; i < traces.length; i++) {
-        await traceManager.deleteTrace(traces[i].UUID);
+        await getTraceManager().deleteTrace(traces[i].UUID);
     }
 };
 
