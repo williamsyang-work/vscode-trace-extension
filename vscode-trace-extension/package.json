@@ -165,7 +165,7 @@
       {
         "view": "welcome",
         "name": "Open Trace",
-        "contents": "There are currently no opened traces. \n[Open Trace](command:openedTraces.openTraceFolder)",
+        "contents": "There are currently no opened traces.\n[Open Trace Folder](command:openedTraces.openTraceFolder)\n[Open Trace File](command:openedTraces.openTraceFile)",
         "when": "trace-explorer.noExperiments || !traceViewer.serverUp"
       },
       {
