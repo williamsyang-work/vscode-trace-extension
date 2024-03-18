@@ -36,12 +36,28 @@ export const addTspClientChangeListener = (listenerFunction: (tspClient: TspClie
 
 /**
  * Get the status of the server.
+ * Updates the VSCode Context for `traceViewer.serverUp`
  * @returns server status as boolean
  */
-export async function isUp(): Promise<boolean> {
+export async function isTraceServerUp(): Promise<boolean> {
     const health = await getTspClient().checkHealth();
     const status = health.getModel()?.status;
-    return health.isOk() && status === 'UP';
+    const serverIsUp = health.isOk() && status === 'UP';
+    vscode.commands.executeCommand('setContext', 'traceViewer.serverUp', serverIsUp);
+    return serverIsUp;
+}
+
+/**
+ * Checks for opened traces and updates the vscode context `trace-explorer.noExperiments`
+ */
+export async function updateNoExperimentsContext(): Promise<void> {
+    const response = await getTspClient().fetchExperiments();
+    if (!response.isOk()) {
+        return;
+    }
+    const noExperiments = !response.getModel()?.length;
+    vscode.commands.executeCommand('setContext', 'trace-explorer.noExperiments', noExperiments);
+    return;
 }
 
 function getUriRootFromUserSettings(): string {

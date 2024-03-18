@@ -15,7 +15,12 @@ import {
     keyboardShortcutsHandler
 } from './trace-explorer/trace-tree';
 import { TraceServerConnectionStatusService } from './utils/trace-server-status';
-import { getTspClientUrl, updateTspClientUrl, isUp } from './utils/backend-tsp-client-provider';
+import {
+    getTspClientUrl,
+    updateTspClientUrl,
+    isTraceServerUp,
+    updateNoExperimentsContext
+} from './utils/backend-tsp-client-provider';
 import { TraceExtensionLogger } from './utils/trace-extension-logger';
 import { ExternalAPI, traceExtensionAPI } from './external-api/external-api';
 import { TraceExtensionWebviewManager } from './utils/trace-extension-webview-manager';
@@ -72,8 +77,9 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
     context.subscriptions.push(
         vscode.commands.registerCommand('traces.openTraceFile', async (file: vscode.Uri) => {
             await startTraceServerIfAvailable(file.fsPath);
-            if (await isUp()) {
+            if (await isTraceServerUp()) {
                 fileOpenHandler(context, file);
+                vscode.commands.executeCommand('setContext', 'trace-explorer.noExperiments', false);
             }
         })
     );
@@ -161,8 +167,9 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
                 return;
             }
             await startTraceServerIfAvailable(traceUri.fsPath);
-            if (await isUp()) {
+            if (await isTraceServerUp()) {
                 fileOpenHandler(context, traceUri);
+                vscode.commands.executeCommand('setContext', 'trace-explorer.noExperiments', false);
             }
         })
     );
@@ -175,7 +182,7 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('serverStatus.started', () => {
-            serverStatusService.render(true);
+            serverStatusService.checkAndUpdateServerStatus();
             if (tracesProvider) {
                 tracesProvider.postMessagetoWebview(VSCODE_MESSAGES.TRACE_SERVER_STARTED, undefined);
             }
@@ -184,12 +191,25 @@ export function activate(context: vscode.ExtensionContext): ExternalAPI {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('serverStatus.stopped', () => {
-            serverStatusService.render(false);
+            serverStatusService.checkAndUpdateServerStatus();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('trace-explorer.refreshContext', async () => {
+            const isUp = await isTraceServerUp();
+            vscode.commands.executeCommand('setContext', 'traceViewer.serverUp', isUp);
+            if (isUp) {
+                await updateNoExperimentsContext();
+            }
         })
     );
 
     vscode.commands.executeCommand('setContext', 'traceViewer.markerSetsPresent', false);
     vscode.commands.executeCommand('setContext', 'traceViewer.markerCategoriesPresent', false);
+    vscode.commands.executeCommand('setContext', 'trace-explorer.noExperiments', true);
+    vscode.commands.executeCommand('trace-explorer.refreshContext');
+    serverStatusService.checkAndUpdateServerStatus();
     return traceExtensionAPI;
 }
 
@@ -201,7 +221,7 @@ export async function deactivate(): Promise<void> {
 }
 
 async function startTraceServerIfAvailable(pathToTrace: string): Promise<void> {
-    if (await isUp()) {
+    if (await isTraceServerUp()) {
         return;
     }
     await traceServerManager.startServer(pathToTrace);
