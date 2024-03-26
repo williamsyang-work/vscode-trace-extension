@@ -105,7 +105,6 @@ class TraceViewerContainer extends React.Component<{}, VscodeAppState> {
             outputs: [],
             overviewOutputDescriptor: undefined,
             theme: 'light',
-            // TODO - ensure we have correct initial state.
             serverStatus: true
         };
         this._signalHandler = new VsCodeMessageManager();

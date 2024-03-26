@@ -81,6 +81,20 @@ export class TraceViewerPanel {
         }
     }
 
+    /**
+     * Directly sends a VSCode Message to all activePanel's webviews.
+     * @param {string} command - command from `VSCODE_MESSAGES` object
+     * @param {unknown} data - payload
+     */
+    public static postMessageToWebviews(command: string, data: unknown): void {
+        Object.values(TraceViewerPanel.activePanels).forEach(activePanel => {
+            if (!activePanel || !activePanel._panel || command) {
+                return;
+            }
+            activePanel._panel.webview.postMessage({ command, data });
+        })
+    }
+
     public static addOutputToCurrent(descriptor: OutputDescriptor): void {
         TraceViewerPanel.currentPanel?.addOutput(descriptor);
     }

@@ -10,22 +10,13 @@ import * as vscode from 'vscode';
  */
 export class TraceExtensionWebviewManager {
     private webviews: vscode.WebviewView[] = [];
-    private webviewPanels: vscode.WebviewPanel[] = [];
     private webviewCreated: vscode.EventEmitter<vscode.WebviewView> = new vscode.EventEmitter();
     private webviewPanelCreated: vscode.EventEmitter<vscode.WebviewPanel> = new vscode.EventEmitter();
     private isManagerDisposed = false;
 
-    // TODO - Should we specify WebviewPanel vs WebviewView
     getAllActiveWebviews(): vscode.WebviewView[] {
         if (!this.isDisposed()) {
             return this.webviews;
-        }
-        return [];
-    }
-
-    getAllActiveWebviewPanels(): vscode.WebviewPanel[] {
-        if (!this.isDisposed()) {
-            return this.webviewPanels;
         }
         return [];
     }
@@ -39,7 +30,6 @@ export class TraceExtensionWebviewManager {
 
     fireWebviewPanelCreated(_webviewPanel: vscode.WebviewPanel): void {
         if (!this.isDisposed()) {
-            this.addWebviewPanel(_webviewPanel);
             this.webviewPanelCreated.fire(_webviewPanel);
         }
     }
@@ -64,7 +54,6 @@ export class TraceExtensionWebviewManager {
             this.isManagerDisposed = true;
         }
     }
-
     isDisposed(): boolean {
         return this.isManagerDisposed;
     }
@@ -84,24 +73,6 @@ export class TraceExtensionWebviewManager {
                 const index = this.webviews.indexOf(webview);
                 if (index !== -1) {
                     this.webviews.splice(index, 1);
-                }
-            });
-    }
-
-    private addWebviewPanel(webviewPanel: vscode.WebviewPanel): void {
-        webviewPanel.onDidDispose(() => {
-            this.removeWebviewPanel(webviewPanel);
-        });
-        this.webviewPanels.push(webviewPanel);
-    }
-
-    private removeWebviewPanel(_webviewPanel: vscode.WebviewPanel): void {
-        this.webviewPanels
-            .filter(webviewPanel => webviewPanel === _webviewPanel)
-            .forEach(webviewPanel => {
-                const index = this.webviewPanels.indexOf(webviewPanel);
-                if (index !== -1) {
-                    this.webviewPanels.splice(index, 1);
                 }
             });
     }

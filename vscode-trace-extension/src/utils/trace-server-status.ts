@@ -2,6 +2,7 @@ import { ThemeColor, StatusBarItem } from 'vscode';
 import { isTraceServerUp } from './backend-tsp-client-provider';
 import { traceExtensionWebviewManager } from '../extension';
 import { VSCODE_MESSAGES } from 'vscode-trace-common/lib/messages/vscode-message-manager';
+import { TraceViewerPanel } from '../trace-viewer-panel/trace-viewer-webview-panel';
 
 export class TraceServerConnectionStatusService {
     private _status = false;
@@ -22,15 +23,14 @@ export class TraceServerConnectionStatusService {
     };
 
     private emitServerStatusChangeToViews = () => {
-        // TODO - this is like kinda weird idk maybe make method in class.
-        const webviews = [
-            ...traceExtensionWebviewManager.getAllActiveWebviews().map(_view => _view.webview),
-            ...traceExtensionWebviewManager.getAllActiveWebviewPanels().map(_view => _view.webview)
-        ];
-
-        webviews.forEach(webview => {
-            webview.postMessage({ command: VSCODE_MESSAGES.CONNECTION_STATUS, data: this._status });
+        const command = VSCODE_MESSAGES.CONNECTION_STATUS;
+        const data = this._status.toString();
+        // WebviewViews
+        traceExtensionWebviewManager.getAllActiveWebviews().forEach(_view => {
+            _view.webview.postMessage({ command, data });
         });
+        // activePanels
+        TraceViewerPanel.postMessageToWebviews(command, data);
     };
 
     private render = (status: boolean): void => {
