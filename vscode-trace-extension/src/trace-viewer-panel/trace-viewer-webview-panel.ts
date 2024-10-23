@@ -45,10 +45,6 @@ export class TraceViewerPanel {
 
     private _disposables: vscode.Disposable[] = [];
     private _experiment: Experiment | undefined = undefined;
-    private _onExperimentSelected = (openedExperiment: Experiment | undefined): void =>
-        this.doHandleExperimentSelectedSignal(openedExperiment);
-    private _onRequestSelectionRangeChange = (payload: TimeRangeUpdatePayload): void =>
-        this.doHandleRequestSelectionRangeChange(payload);
 
     /**
      * Creates a new or gets an existing panel by name. Shows existing if not active.
@@ -342,8 +338,8 @@ export class TraceViewerPanel {
             undefined,
             this._disposables
         );
-        signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().on(Signals.REQUEST_SELECTION_RANGE_CHANGE, this._onRequestSelectionRangeChange);
+        signalManager().on(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
+        signalManager().on(Signals.REQUEST_SELECTION_RANGE_CHANGE, this.onRequestSelectionRangeChange);
     }
 
     public doRefactor(): void {
@@ -364,22 +360,22 @@ export class TraceViewerPanel {
                 x.dispose();
             }
         }
-        signalManager().off(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().off(Signals.REQUEST_SELECTION_RANGE_CHANGE, this._onRequestSelectionRangeChange);
+        signalManager().off(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
+        signalManager().off(Signals.REQUEST_SELECTION_RANGE_CHANGE, this.onRequestSelectionRangeChange);
     }
 
-    protected doHandleExperimentSelectedSignal(experiment: Experiment | undefined): void {
+    protected onExperimentSelected = (experiment: Experiment | undefined): void => {
         if (this._experiment && experiment && this._experiment.UUID === experiment.UUID) {
             const wrapper: string = JSONBig.stringify(experiment);
             this._panel.webview.postMessage({ command: VSCODE_MESSAGES.EXPERIMENT_SELECTED, data: wrapper });
         }
     }
 
-    protected doHandleExperimentUpdatedSignal(experiment: Experiment): void {
+    protected t = (experiment: Experiment): void => {
         signalManager().fireExperimentUpdatedSignal(experiment);
     }
 
-    protected doHandleRequestSelectionRangeChange(payload: TimeRangeUpdatePayload): void {
+    protected onRequestSelectionRangeChange = (payload: TimeRangeUpdatePayload): void => {
         this._panel.webview.postMessage({
             command: VSCODE_MESSAGES.REQUEST_SELECTION_RANGE_CHANGE,
             data: JSONBig.stringify(payload)

@@ -26,10 +26,6 @@ class TraceExplorerViewsWidget extends React.Component<{}, AvailableViewsAppStat
     static ID = 'trace-explorer-analysis-widget';
     static LABEL = 'Available Analyses';
 
-    private _onExperimentSelected = (openedExperiment: Experiment | undefined): void =>
-        this.doHandleExperimentSelectedSignal(openedExperiment);
-    private _onOutputAdded = (payload: OutputAddedSignalPayload): void => this.doHandleOutputAddedSignal(payload);
-
     constructor(props: {}) {
         super(props);
         this.state = {
@@ -62,20 +58,20 @@ class TraceExplorerViewsWidget extends React.Component<{}, AvailableViewsAppStat
 
     componentDidMount(): void {
         this._signalHandler.notifyReady();
-        signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().on(Signals.OUTPUT_ADDED, this._onOutputAdded);
+        signalManager().on(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
+        signalManager().on(Signals.OUTPUT_ADDED, this.onOutputAdded);
     }
 
     componentWillUnmount(): void {
-        signalManager().off(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().off(Signals.OUTPUT_ADDED, this._onOutputAdded);
+        signalManager().off(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
+        signalManager().off(Signals.OUTPUT_ADDED, this.onOutputAdded);
     }
 
-    protected doHandleExperimentSelectedSignal(experiment: Experiment | undefined): void {
+    protected onExperimentSelected = (experiment: Experiment | undefined): void => {
         this._signalHandler.experimentSelected(experiment);
     }
 
-    protected doHandleOutputAddedSignal(payload: OutputAddedSignalPayload): void {
+    protected onOutputAdded = (payload: OutputAddedSignalPayload): void => {
         if (payload) {
             this._signalHandler.outputAdded(payload);
         }

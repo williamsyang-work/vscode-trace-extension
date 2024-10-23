@@ -86,18 +86,15 @@ export class TraceExplorerAvailableViewsProvider extends AbstractTraceExplorerPr
             this._disposables
         );
 
-        signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
+        signalManager().on(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
     }
 
     protected dispose() {
-        signalManager().off(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
+        signalManager().off(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
         super.dispose();
     }
 
-    private _onExperimentSelected = (experiment: Experiment | undefined): void =>
-        this.doHandleExperimentSelectedSignal(experiment);
-
-    protected doHandleExperimentSelectedSignal(experiment: Experiment | undefined): void {
+    protected onExperimentSelected = (experiment: Experiment | undefined): void => {
         if (!this._selectionOngoing && this._view) {
             this._selectedExperiment = experiment;
             const wrapper: string = JSONBig.stringify(experiment);

@@ -26,20 +26,14 @@ export class TraceExplorerOpenedTracesViewProvider extends AbstractTraceExplorer
 
     private _selectedExperiment: Experiment | undefined;
 
-    private _onOpenedTracesWidgetActivated = (experiment: Experiment): void =>
-        this.doHandleTracesWidgetActivatedSignal(experiment);
-    private _onExperimentSelected = (experiment: Experiment | undefined): void =>
-        this.doHandleExperimentSelectedSignal(experiment);
-    private _onExperimentOpened = (experiment: Experiment): void => this.doHandleExperimentOpenedSignal(experiment);
-
-    protected doHandleExperimentOpenedSignal(experiment: Experiment): void {
+    protected onOpenedTracesWidgetActivated = (experiment: Experiment): void => {
         if (this._view && experiment) {
             const wrapper: string = JSONBig.stringify(experiment);
             this._view.webview.postMessage({ command: VSCODE_MESSAGES.EXPERIMENT_OPENED, data: wrapper });
         }
     }
 
-    protected doHandleTracesWidgetActivatedSignal(experiment: Experiment): void {
+    protected onExperimentOpened = (experiment: Experiment): void => {
         if (!experiment) {
             return;
         }
@@ -56,7 +50,7 @@ export class TraceExplorerOpenedTracesViewProvider extends AbstractTraceExplorer
         }
     }
 
-    protected doHandleExperimentSelectedSignal(experiment: Experiment | undefined): void {
+    protected onExperimentSelected = (experiment: Experiment | undefined): void => {
         if (this._view) {
             this._selectedExperiment = experiment;
         }
@@ -134,14 +128,14 @@ export class TraceExplorerOpenedTracesViewProvider extends AbstractTraceExplorer
             this._disposables
         );
 
-        signalManager().on(Signals.TRACEVIEWERTAB_ACTIVATED, this._onOpenedTracesWidgetActivated);
-        signalManager().on(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().on(Signals.EXPERIMENT_OPENED, this._onExperimentOpened);
+        signalManager().on(Signals.TRACEVIEWERTAB_ACTIVATED, this.onOpenedTracesWidgetActivated);
+        signalManager().on(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
+        signalManager().on(Signals.EXPERIMENT_OPENED, this.onExperimentOpened);
     }
     protected dispose() {
-        signalManager().off(Signals.TRACEVIEWERTAB_ACTIVATED, this._onOpenedTracesWidgetActivated);
-        signalManager().off(Signals.EXPERIMENT_SELECTED, this._onExperimentSelected);
-        signalManager().off(Signals.EXPERIMENT_OPENED, this._onExperimentOpened);
+        signalManager().off(Signals.TRACEVIEWERTAB_ACTIVATED, this.onOpenedTracesWidgetActivated);
+        signalManager().off(Signals.EXPERIMENT_SELECTED, this.onExperimentSelected);
+        signalManager().off(Signals.EXPERIMENT_OPENED, this.onExperimentOpened);
         super.dispose();
     }
 }
