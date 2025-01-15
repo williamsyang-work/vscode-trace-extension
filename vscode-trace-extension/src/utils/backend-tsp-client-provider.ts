@@ -68,8 +68,10 @@ export async function updateNoExperimentsContext(): Promise<void> {
 }
 
 async function getExternalUriFromUserSettings(): Promise<vscode.Uri> {
-    const tsConfig = vscode.workspace.getConfiguration('trace-compass.traceserver');
-    const traceServerUrl: string = tsConfig.get<string>('url') || 'http://localhost:8080';
+    const tsConfig =vscode.workspace.getConfiguration('trace-compass.traceserver');
+    const traceServerUrl: string = tsConfig.get<boolean>('enableSeparateBackendUrl') ? 
+        tsConfig.get<string>('backendUrl') || tsConfig.get<string>('url') || 'http://localhost:8080' :
+        tsConfig.get<string>('url') || 'http://localhost:8080';
     const url = traceServerUrl.endsWith('/') ? traceServerUrl : traceServerUrl + '/';
     const baseUri = vscode.Uri.parse(url);
     return vscode.env.asExternalUri(baseUri);
