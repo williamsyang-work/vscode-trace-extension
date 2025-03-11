@@ -1,0 +1,9 @@
+{
+  "serverUrl": "localhost:3000",
+  "maxConnections": 10,
+  "timeout": 5000,
+  "features": {
+    "enableLogging": false,
+    "enableCache": false
+  }
+}

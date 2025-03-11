@@ -35,14 +35,6 @@
     "contributes": {
         "commands": [
             {
-                "command": "yourExtension.openJsonEditor",
-                "title": "Open JSON Configuration"
-            },
-            {
-                "command": "yourExtension.openJsonEditorFromFile",
-                "title": "Open JSON Configuration from File"
-            },
-            {
                 "command": "outputs.reset",
                 "title": "Reset",
                 "icon": {
@@ -200,14 +192,6 @@
                 {
                     "command": "traces.openTraceFile",
                     "group": "navigation@40"
-                },
-                {
-                    "command": "yourExtension.openJsonEditor",
-                    "group": "navigation@41"
-                },
-                {
-                    "command": "yourExtension.openJsonEditorFromFile",
-                    "group": "navigation@42"
                 }
             ],
             "editor/title": [
